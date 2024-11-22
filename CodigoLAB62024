@@ -1,0 +1,80 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Datos experimentales (estimados) para U-152 en posición "a" y "b"
+# Cada conjunto representa ganancia (U-151): 8, 6, 4, 2, 0
+
+# Tiempos (en ms) y errores (en V)
+data_a = {
+    "ganancias": [8, 6, 4, 2, 0],
+    "tiempo_subida": [400, 290, 260, 252, 500],
+    "tiempo_asentamiento": [730, 440, 380, 300, 500],
+    "sobrepaso": [0, 0, 520, 1200, 0],  # En mV
+    "error_ee": [120, 720, 120, 0, 0],  # En mV
+}
+
+data_b = {
+    "ganancias": [8, 6, 4, 2, 0],
+    "tiempo_subida": [540, 320, 300, 240, 1300],
+    "tiempo_asentamiento": [660, 460, 400, 1800, 1300],
+    "sobrepaso": [0, 1270, 3200, 4320, 0],  # En mV
+    "error_ee": [280, 80, 240, 2400, 0],  # En mV
+}
+
+# Función para simular respuesta transitoria
+def sistema_respuesta(t, K, sobrepaso, asentamiento, subida, error_ee):
+    """Genera una respuesta típica para los parámetros dados."""
+    respuesta = np.zeros_like(t)
+    for i, ti in enumerate(t):
+        if ti <= subida:
+            respuesta[i] = K * (ti / subida)  # Línea ascendente hasta tiempo de subida
+        elif ti <= asentamiento:
+            # Amortiguamiento oscilatorio alrededor del valor final
+            respuesta[i] = K + sobrepaso * np.exp(-0.01 * (ti - subida)) * np.sin(0.05 * (ti - subida))
+        else:
+            respuesta[i] = K + error_ee  # Estado estable (con error final)
+    return respuesta
+
+# Configuración de tiempos para graficar
+t = np.linspace(0, 2000, 1000)  # Tiempo en ms
+
+# Generar las trazas para cada ganancia (posición "a")
+fig, axs = plt.subplots(2, 1, figsize=(12, 10))
+
+for i, ganancia in enumerate(data_a["ganancias"]):
+    respuesta_a = sistema_respuesta(
+        t,
+        K=1,  # Escalamiento
+        sobrepaso=data_a["sobrepaso"][i] / 1000,  # Convertir a V
+        asentamiento=data_a["tiempo_asentamiento"][i],
+        subida=data_a["tiempo_subida"][i],
+        error_ee=data_a["error_ee"][i] / 1000,
+    )
+    axs[0].plot(t, respuesta_a, label=f"Ganancia: {ganancia}")
+
+axs[0].set_title("Trazas para U-152 en posición 'a'")
+axs[0].set_xlabel("Tiempo (ms)")
+axs[0].set_ylabel("Respuesta (V)")
+axs[0].legend()
+axs[0].grid()
+
+# Generar las trazas para cada ganancia (posición "b")
+for i, ganancia in enumerate(data_b["ganancias"]):
+    respuesta_b = sistema_respuesta(
+        t,
+        K=1,  # Escalamiento
+        sobrepaso=data_b["sobrepaso"][i] / 1000,  # Convertir a V
+        asentamiento=data_b["tiempo_asentamiento"][i],
+        subida=data_b["tiempo_subida"][i],
+        error_ee=data_b["error_ee"][i] / 1000,
+    )
+    axs[1].plot(t, respuesta_b, label=f"Ganancia: {ganancia}")
+
+axs[1].set_title("Trazas para U-152 en posición 'b'")
+axs[1].set_xlabel("Tiempo (ms)")
+axs[1].set_ylabel("Respuesta (V)")
+axs[1].legend()
+axs[1].grid()
+
+plt.tight_layout()
+plt.show()
